@@ -10,22 +10,22 @@ import serial
 # time.sleep(2)  # Tunggu sebentar agar koneksi serial stabil
 
 # baca gambar
-cap = cv2.VideoCapture("video/renang.mp4")
+cap = cv2.VideoCapture(0)
 
 # Mengubah dimensi video
 desired_width = 640
 desired_height = 480
 
-# Mengambil dimensi video asli
-original_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-original_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+# # Mengambil dimensi video asli
+# original_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+# original_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-# Menentukan rasio perubahan
-width_ratio = desired_width / original_width
-height_ratio = desired_height / original_height
+# # Menentukan rasio perubahan
+# width_ratio = desired_width / original_width
+# height_ratio = desired_height / original_height
 
 # model
-model = YOLO('forReal2_openvino_model/', task='detect')
+model = YOLO('ini352_2.onnx', task='detect')
 
 # object classes
 classNames = ["bucket", "gate", "obstacle"]
@@ -59,7 +59,7 @@ while True:
     image_center_x = int(img.shape[1] / 2)
     image_center_y = int(img.shape[0] / 2)
     
-    results = model(img, conf=0.85, imgsz=640)
+    results = model(img, conf=0.85, imgsz=352)
 
     # coordinates
     for r in results:
@@ -117,7 +117,10 @@ while True:
                 arah = 'kiri'                    
             else:
                 arah ='maju'
-      
+                
+        # tidak terdetekis objek
+        if not boxes:
+            arah = ""  
         
     # Menampilkan data kedalaman dan jarak dari Arduino di frame
     # if ser.in_waiting > 0:

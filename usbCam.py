@@ -79,13 +79,9 @@ def process_frame(img, model, classNames, desired_width, desired_height):
                         arah = 'maju'
                 else:
                     arah = 'stop'
+                    return img, True  # Mengembalikan True untuk menandakan penghentian
                 print("bucket")
-                print("total width: ", total_width)
             elif classNames[cls] == "gate":
-                # if image_center_y - 30 > center_y:
-                #     arah = 'atas'
-                # elif image_center_y + 30 < center_y:
-                #     arah = 'bawah'
                 if center_x > image_center_x + 30:
                     arah = 'kanan'
                 elif center_x < image_center_x - 30:
@@ -95,8 +91,6 @@ def process_frame(img, model, classNames, desired_width, desired_height):
                 print("gate")
             elif classNames[cls] == "obstacle":
                 arah = "kanan"
-                # time.sleep(2)
-                # arah = "maju"
                 print("obstacle")
             
             org = [x1 + 10, y1 - 10]
@@ -108,7 +102,7 @@ def process_frame(img, model, classNames, desired_width, desired_height):
             cv2.circle(img, (center_x, center_y), 5, (0, 255, 0), -1)
             cv2.putText(img, classNames[cls], org, font, fontScale, color, thickness)
     
-    return img
+    return img, False  # Mengembalikan False untuk melanjutkan pembacaan
 
 while True: 
     success, img = cap.read()
@@ -118,7 +112,11 @@ while True:
     
     img = cv2.resize(img, (desired_width, desired_height))
     
-    img = process_frame(img, model, classNames, desired_width, desired_height)
+    img, stop_signal = process_frame(img, model, classNames, desired_width, desired_height)
+    
+    if stop_signal:
+        print("Misi selesai: Kondisi 'stop' tercapai.")
+        break
     
     # Menampilkan data dari Arduino di frame (contoh)
     # if ser.in_waiting > 0:

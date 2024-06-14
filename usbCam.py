@@ -10,7 +10,7 @@ import serial
 # time.sleep(2)  # Tunggu sebentar agar koneksi serial stabil
 
 # Baca video
-cap = cv2.VideoCapture("video/renang.mp4")
+cap = cv2.VideoCapture("video/testvid.mp4")
 if not cap.isOpened():
     print("Error: Tidak dapat membuka video.")
     exit()
@@ -67,11 +67,7 @@ def process_frame(img, model, classNames, desired_width, desired_height):
             if classNames[cls] == "bucket":
                 total_width = x2 - x1
                 if total_width < desired_width * 0.5:
-                    if image_center_y - 30 > center_y:
-                        arah = 'atas'
-                    elif image_center_y + 30 < center_y:
-                        arah = 'bawah'
-                    elif center_x > image_center_x + 30:
+                    if center_x > image_center_x + 30:
                         arah = 'kanan'
                     elif center_x < image_center_x - 30:
                         arah = 'kiri'
@@ -80,7 +76,7 @@ def process_frame(img, model, classNames, desired_width, desired_height):
                 else:
                     arah = 'stop'
                     return img, True  # Mengembalikan True untuk menandakan penghentian
-                print("bucket")
+                # print("bucket")
             elif classNames[cls] == "gate":
                 if center_x > image_center_x + 30:
                     arah = 'kanan'
@@ -88,10 +84,10 @@ def process_frame(img, model, classNames, desired_width, desired_height):
                     arah = 'kiri'
                 else:
                     arah = 'maju'
-                print("gate")
+                # print("gate")
             elif classNames[cls] == "obstacle":
                 arah = "kanan"
-                print("obstacle")
+                # print("obstacle")
             
             org = [x1 + 10, y1 - 10]
             font = cv2.FONT_HERSHEY_SIMPLEX

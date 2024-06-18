@@ -10,7 +10,7 @@ import serial
 # time.sleep(2)  # Tunggu sebentar agar koneksi serial stabil
 
 # Baca video
-cap = cv2.VideoCapture("video/testvid.mp4")
+cap = cv2.VideoCapture("video/take8.mp4")
 if not cap.isOpened():
     print("Error: Tidak dapat membuka video.")
     exit()
@@ -22,7 +22,7 @@ cap.set(cv2.CAP_PROP_FRAME_WIDTH, desired_width)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, desired_height)
 
 # Load model YOLO
-model = YOLO('palingBaru.onnx', task='detect')
+model = YOLO('fixIni.onnx', task='detect')
 
 # Object classes
 classNames = ["bucket", "gate", "obstacle"]
@@ -34,10 +34,17 @@ fps = 0
 
 # Variabel arah gerak
 arah = ""
+arah_sebelumnya = ""
+
+# Variabel state misi
+gate1_passed = False
+obstacle_avoided = False
+gate3_passed = False
+barang_dijatuhkan = False
 
 # Fungsi untuk memproses frame
 def process_frame(img, model, classNames, desired_width, desired_height):
-    global arah
+    global arah, gate1_passed, obstacle_avoided, gate3_passed, barang_dijatuhkan
     image_center_x = int(img.shape[1] / 2)
     image_center_y = int(img.shape[0] / 2)
     
@@ -46,9 +53,17 @@ def process_frame(img, model, classNames, desired_width, desired_height):
     for r in results:
         boxes = r.boxes
         
+        # jika tidak terdeteksi objek
         if not boxes:
-            arah = "unfound"
+            arah = 'f' # maju
+            if gate1_passed:
+                arah = 'f' # maju
+            elif obstacle_avoided:
+                arah = 'l' # kiri
+            elif gate3_passed:
+                arah = 'o' # serong kiri
         
+        # terdeteksi objek
         for box in boxes:
             x1, y1, x2, y2 = box.xyxy[0]
             x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
@@ -64,30 +79,65 @@ def process_frame(img, model, classNames, desired_width, desired_height):
             cls = int(box.cls)
             print("Class name -->", classNames[cls])
 
-            if classNames[cls] == "bucket":
-                total_width = x2 - x1
-                if total_width < desired_width * 0.5:
-                    if center_x > image_center_x + 30:
-                        arah = 'kanan'
-                    elif center_x < image_center_x - 30:
-                        arah = 'kiri'
-                    else:
-                        arah = 'maju'
-                else:
-                    arah = 'stop'
-                    return img, True  # Mengembalikan True untuk menandakan penghentian
-                # print("bucket")
-            elif classNames[cls] == "gate":
+            if classNames[box.cls] == "gate" and not gate1_passed:
+                width_gate1 = x2-x1
+                # Deteksi Gate 1 dan menandakan telah dilewati
                 if center_x > image_center_x + 30:
-                    arah = 'kanan'
+                    arah = 'r' # kanan
                 elif center_x < image_center_x - 30:
-                    arah = 'kiri'
+                    arah = 'l' # kiri
                 else:
-                    arah = 'maju'
-                # print("gate")
-            elif classNames[cls] == "obstacle":
-                arah = "kanan"
-                # print("obstacle")
+                    arah = 'f' # maju
+                    
+                if width_gate1 > 0.9*desired_width:
+                    gate1_passed = True
+                    print("Gate 1 telah dilewati!")
+            
+            elif classNames[box.cls] == "obstacle" and gate1_passed and not obstacle_avoided:
+                width_obstacle = x2-x1
+                # Deteksi obstacle dan menghindarinya setelah Gate 1 terlewati
+                if width_obstacle < 0.7*desired_width:
+                    if center_x > image_center_x + 30:
+                        arah = 'r' # kanan
+                    elif center_x < image_center_x - 30:
+                        arah = 'l' # kiri
+                    else:
+                        arah = 'f' # maju
+                else:
+                    arah = 'r' # kanan
+                    obstacle_avoided = True
+                    print("Obstacle dihindari!")
+            
+            elif classNames[box.cls] == "gate" and obstacle_avoided and not gate3_passed:
+                width_gate3 = x2-x1
+                
+                # Deteksi Gate 3 dan menandakan telah dilewati setelah menghindari obstacle
+                if center_x > image_center_x + 30:
+                    arah = 'r' # kanan
+                elif center_x < image_center_x - 30:
+                    arah = 'l' # kiri
+                else:
+                    arah = 'f' # maju
+                    
+                if width_gate3 > 0.9*desired_width:
+                    gate3_passed = True
+                    print("Gate 3 telah dilewati!")
+            
+            elif classNames[box.cls] == "bucket" and gate3_passed and not barang_dijatuhkan:
+                # Deteksi bucket dan menjatuhkan barang setelah Gate 3 terlewati
+                width_bucket= x2 - x1
+                if width_bucket < desired_width * 0.9:
+                    if center_x > image_center_x + 30:
+                        arah = 'r' # kanan
+                    elif center_x < image_center_x - 30:
+                        arah = 'l' # kiri
+                    else:
+                        arah = 'f' # maju
+                else:
+                    arah = 's' # stop
+                    barang_dijatuhkan = True
+                    print("Barang berhasil dijatuhkan")
+                    return img, True  # Mengembalikan True untuk menandakan penghentian
             
             org = [x1 + 10, y1 - 10]
             font = cv2.FONT_HERSHEY_SIMPLEX
@@ -132,7 +182,11 @@ while True:
     #     elif data.startswith("Z:"):
     #         z_axis_S = data.split(":")[1]
     
-    # ser.write(arah.encode())
+    # Mengirim data hanya saat arah berubah
+    if arah != arah_sebelumnya:
+        print(f"Mengirim data: {arah}")
+        # ser.write(arah.encode())
+        arah_sebelumnya = arah
     
     cv2.putText(img, f"Arah Gerak: {arah}", (470, 450), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
     

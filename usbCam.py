@@ -10,7 +10,7 @@ import serial
 # time.sleep(2)  # Tunggu sebentar agar koneksi serial stabil
 
 # Baca video
-cap = cv2.VideoCapture("video/take8.mp4")
+cap = cv2.VideoCapture("video/take2.mp4")
 if not cap.isOpened():
     print("Error: Tidak dapat membuka video.")
     exit()
@@ -22,7 +22,7 @@ cap.set(cv2.CAP_PROP_FRAME_WIDTH, desired_width)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, desired_height)
 
 # Load model YOLO
-model = YOLO('fixIni.onnx', task='detect')
+model = YOLO('baru320.onnx', task='detect')
 
 # Object classes
 classNames = ["bucket", "gate", "obstacle"]
@@ -48,7 +48,7 @@ def process_frame(img, model, classNames, desired_width, desired_height):
     image_center_x = int(img.shape[1] / 2)
     image_center_y = int(img.shape[0] / 2)
     
-    results = model(img, conf=0.85, imgsz=352)
+    results = model(img, conf=0.85, imgsz=320)
     
     for r in results:
         boxes = r.boxes
@@ -59,9 +59,10 @@ def process_frame(img, model, classNames, desired_width, desired_height):
             if gate1_passed:
                 arah = 'f' # maju
             elif obstacle_avoided:
-                arah = 'l' # kiri
+                arah = 'b' # kiri
             elif gate3_passed:
                 arah = 'o' # serong kiri
+            return img, False
         
         # terdeteksi objek
         for box in boxes:
@@ -79,7 +80,7 @@ def process_frame(img, model, classNames, desired_width, desired_height):
             cls = int(box.cls)
             print("Class name -->", classNames[cls])
 
-            if classNames[box.cls] == "gate" and not gate1_passed:
+            if classNames[cls] == "gate" and not gate1_passed:
                 width_gate1 = x2-x1
                 # Deteksi Gate 1 dan menandakan telah dilewati
                 if center_x > image_center_x + 30:
@@ -93,7 +94,7 @@ def process_frame(img, model, classNames, desired_width, desired_height):
                     gate1_passed = True
                     print("Gate 1 telah dilewati!")
             
-            elif classNames[box.cls] == "obstacle" and gate1_passed and not obstacle_avoided:
+            elif classNames[cls] == "obstacle" and gate1_passed and not obstacle_avoided:
                 width_obstacle = x2-x1
                 # Deteksi obstacle dan menghindarinya setelah Gate 1 terlewati
                 if width_obstacle < 0.7*desired_width:
@@ -108,7 +109,7 @@ def process_frame(img, model, classNames, desired_width, desired_height):
                     obstacle_avoided = True
                     print("Obstacle dihindari!")
             
-            elif classNames[box.cls] == "gate" and obstacle_avoided and not gate3_passed:
+            elif classNames[cls] == "gate" and obstacle_avoided and not gate3_passed:
                 width_gate3 = x2-x1
                 
                 # Deteksi Gate 3 dan menandakan telah dilewati setelah menghindari obstacle
@@ -123,16 +124,16 @@ def process_frame(img, model, classNames, desired_width, desired_height):
                     gate3_passed = True
                     print("Gate 3 telah dilewati!")
             
-            elif classNames[box.cls] == "bucket" and gate3_passed and not barang_dijatuhkan:
+            elif classNames[cls] == "bucket" and gate3_passed and not barang_dijatuhkan:
                 # Deteksi bucket dan menjatuhkan barang setelah Gate 3 terlewati
                 width_bucket= x2 - x1
                 if width_bucket < desired_width * 0.9:
                     if center_x > image_center_x + 30:
-                        arah = 'r' # kanan
+                        arah = 'd' # kanan
                     elif center_x < image_center_x - 30:
-                        arah = 'l' # kiri
+                        arah = 'a' # kiri
                     else:
-                        arah = 'f' # maju
+                        arah = 'w' # maju
                 else:
                     arah = 's' # stop
                     barang_dijatuhkan = True

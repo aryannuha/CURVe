@@ -10,7 +10,7 @@ import serial
 # time.sleep(2)  # Tunggu sebentar agar koneksi serial stabil
 
 # Baca video
-cap = cv2.VideoCapture("video/take2.mp4")
+cap = cv2.VideoCapture("video/take8.mp4")
 if not cap.isOpened():
     print("Error: Tidak dapat membuka video.")
     exit()
@@ -97,7 +97,7 @@ def process_frame(img, model, classNames, desired_width, desired_height):
             elif classNames[cls] == "obstacle" and gate1_passed and not obstacle_avoided:
                 width_obstacle = x2-x1
                 # Deteksi obstacle dan menghindarinya setelah Gate 1 terlewati
-                if width_obstacle < 0.7*desired_width:
+                if width_obstacle < 0.25*desired_width:
                     if center_x > image_center_x + 30:
                         arah = 'r' # kanan
                     elif center_x < image_center_x - 30:
@@ -124,10 +124,10 @@ def process_frame(img, model, classNames, desired_width, desired_height):
                     gate3_passed = True
                     print("Gate 3 telah dilewati!")
             
-            elif classNames[cls] == "bucket" and gate3_passed and not barang_dijatuhkan:
+            elif classNames[cls] == "bucket" and not barang_dijatuhkan:
                 # Deteksi bucket dan menjatuhkan barang setelah Gate 3 terlewati
-                width_bucket= x2 - x1
-                if width_bucket < desired_width * 0.9:
+                width_bucket = x2 - x1
+                if width_bucket < desired_width * 0.95:
                     if center_x > image_center_x + 30:
                         arah = 'd' # kanan
                     elif center_x < image_center_x - 30:
@@ -151,19 +151,17 @@ def process_frame(img, model, classNames, desired_width, desired_height):
     
     return img, False  # Mengembalikan False untuk melanjutkan pembacaan
 
+stop_signal = False
+
 while True: 
-    success, img = cap.read()
-    if not success:
-        print("Error: Tidak dapat membaca frame video.")
-        break
-    
-    img = cv2.resize(img, (desired_width, desired_height))
-    
-    img, stop_signal = process_frame(img, model, classNames, desired_width, desired_height)
-    
-    if stop_signal:
-        print("Misi selesai: Kondisi 'stop' tercapai.")
-        break
+    if not stop_signal:  # Hanya baca frame baru jika stop_signal belum tercapai
+        success, img = cap.read()
+        if not success:
+            print("Error: Tidak dapat membaca frame video.")
+            break
+        
+        img = cv2.resize(img, (desired_width, desired_height))
+        img, stop_signal = process_frame(img, model, classNames, desired_width, desired_height)
     
     # Menampilkan data dari Arduino di frame (contoh)
     # if ser.in_waiting > 0:
@@ -203,6 +201,10 @@ while True:
         fps_start_time = time.time()
     
     cv2.putText(img, f"FPS: {fps}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+    cv2.putText(img, f"Gate1: {gate1_passed}", (10, 390), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+    cv2.putText(img, f"Obstacle: {obstacle_avoided}", (10, 410), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+    cv2.putText(img, f"Gate3: {gate3_passed}", (10, 430), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+    cv2.putText(img, f"Drop Item: {barang_dijatuhkan}", (10, 450), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
     
     cv2.imshow("img", img)
     

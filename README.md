@@ -2,17 +2,10 @@ repository ini dibuat untuk menyimpan dan mengerjakan hal-hal yang dibutuhkan ol
 
 upload aja file yang terkait dengan pendeteksian warna, pendeteksian objek, penentuan arah gerak robot.
 
-// program detect_USB.py
-  berisi untuk mendeteksi warna dan objek
-  nilai VideoCapture() dapat berubah sesuai dengan camera ke berapa yang digunakan
-  nilai hsv_minimum dan hsv_maksimum dapat berubah-ubah
+Isi program yang menggunakan cv2.VideoCapture untuk menggunakan USB Camera atau Webcam
+Isi program yang menggunakan picamera.capture_array() untuk menggunakan module camera raspberry pi
 
-// program hsvTracker.py
-  berisi untuk mencari nilai hsv_minimum dan maksimum dari suatu warna
-
-gate warna orange berbentuk persegi panjang;
-obstacle warna orange berbentuk silinder;
-karpet berwarna hijau persegi;
-bucket berwarna merah;
+Terdapat dua model yaitu YoloV8 dan TfLite
 
 sekian, Terimakasih
+Semangat Pokoknya :)
